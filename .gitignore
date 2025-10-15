@@ -108,6 +108,12 @@ Config/*.ini
 !Plugins/**/Source/**
 !Plugins/**/Content/**
 
+# Exclude External Actors and External Objects (UE5 World Partition)
+Content/__ExternalActors__/
+Content/__ExternalObjects__/
+Plugins/*/Content/__ExternalActors__/
+Plugins/*/Content/__ExternalObjects__/
+
 # Logs
 logs
 npm-debug.log*
