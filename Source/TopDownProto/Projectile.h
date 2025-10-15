@@ -110,5 +110,27 @@ protected:
 	 * Handle projectile destruction
 	 */
 	virtual void OnProjectileDestroy();
+
+	/**
+	 * Multicast RPC - Play hit effects on all clients
+	 * @param HitLocation - Location where projectile hit
+	 * @param HitNormal - Normal vector of the hit surface
+	 */
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayHitEffects(FVector_NetQuantize HitLocation, FVector_NetQuantize HitNormal);
+	void MulticastPlayHitEffects_Implementation(FVector_NetQuantize HitLocation, FVector_NetQuantize HitNormal);
+
+public:
+	// ========================================================================================
+	// Hit Effects Configuration
+	// ========================================================================================
+
+	/** Particle effect to play on hit */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Effects")
+	class UParticleSystem* HitEffect;
+
+	/** Sound to play on hit */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Effects")
+	class USoundBase* HitSound;
 };
 

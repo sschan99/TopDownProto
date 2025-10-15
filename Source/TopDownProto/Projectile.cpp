@@ -49,6 +49,10 @@ AProjectile::AProjectile()
 	bAffectedByGravity = false;
 	Damage = 10.0f;
 
+	// Initialize effects (set in Blueprint)
+	HitEffect = nullptr;
+	HitSound = nullptr;
+
 	// Set initial lifespan
 	InitialLifeSpan = Lifetime;
 }
@@ -99,7 +103,11 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimi
 	// Don't hit ourselves or our instigator
 	if (OtherActor && OtherActor != this && OtherActor != GetInstigator())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Projectile hit: %s"), *OtherActor->GetName());
+		UE_LOG(LogTemp, Log, TEXT("Projectile hit: %s at location %s"), 
+		       *OtherActor->GetName(), *Hit.ImpactPoint.ToString());
+
+		// Play hit effects on all clients
+		MulticastPlayHitEffects(Hit.ImpactPoint, Hit.ImpactNormal);
 
 		// Apply damage to hit actor
 		if (Damage > 0.0f)
@@ -126,10 +134,35 @@ void AProjectile::OnProjectileDestroy()
 	if (HasAuthority())
 	{
 		UE_LOG(LogTemp, Log, TEXT("Destroying projectile: %s"), *GetName());
-		
-		// TODO: Spawn hit effects (particles, sound) via multicast RPC in future task
-		
 		Destroy();
 	}
+}
+
+void AProjectile::MulticastPlayHitEffects_Implementation(FVector_NetQuantize HitLocation, FVector_NetQuantize HitNormal)
+{
+	// Play hit particle effect
+	if (HitEffect)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(
+			GetWorld(),
+			HitEffect,
+			HitLocation,
+			HitNormal.Rotation(),
+			FVector(1.0f),
+			true
+		);
+	}
+
+	// Play hit sound
+	if (HitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			HitSound,
+			HitLocation
+		);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Playing hit effects at %s"), *HitLocation.ToString());
 }
 
