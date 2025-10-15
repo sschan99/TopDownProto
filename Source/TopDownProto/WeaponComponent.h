@@ -116,6 +116,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Ammo")
 	int32 GetMagazineSize() const { return MagazineSize; }
 
+	/**
+	 * Reset ammo to starting values (used for respawn)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Ammo")
+	void ResetAmmo();
+
 	// ========================================================================================
 	// Reload System
 	// ========================================================================================

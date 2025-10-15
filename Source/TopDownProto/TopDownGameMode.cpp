@@ -135,7 +135,15 @@ void ATopDownGameMode::HandleRespawn(AController* Controller)
 
 	if (NewPawn)
 	{
+		// Possess the new pawn
 		Controller->Possess(NewPawn);
+
+		// Reset character state (health, ammo, etc.)
+		if (ATopDownCharacter* Character = Cast<ATopDownCharacter>(NewPawn))
+		{
+			Character->ResetForRespawn();
+		}
+
 		UE_LOG(LogTemp, Log, TEXT("Player respawned: %s"), *Controller->GetName());
 	}
 	else

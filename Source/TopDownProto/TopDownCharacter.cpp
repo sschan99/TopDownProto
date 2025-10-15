@@ -19,6 +19,7 @@
 #include "Particles/ParticleSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
+#include "TopDownGameMode.h"
 
 ATopDownCharacter::ATopDownCharacter()
 {
@@ -316,6 +317,12 @@ bool ATopDownCharacter::ServerRequestReload_Validate()
 	return true;
 }
 
+void ATopDownCharacter::ServerUpdateRotation_Implementation(FRotator NewRotation)
+{
+	// Server updates rotation for replication to all clients
+	SetActorRotation(NewRotation);
+}
+
 void ATopDownCharacter::MulticastPlayFireEffects_Implementation(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection)
 {
 	// Play muzzle flash particle effect
@@ -389,7 +396,14 @@ void ATopDownCharacter::UpdateRotationToMouseCursor(float DeltaTime)
 						FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, 10.0f);
 
 						// Apply rotation (Yaw only for top-down)
-						SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));
+						FRotator FinalRotation = FRotator(0.0f, NewRotation.Yaw, 0.0f);
+						SetActorRotation(FinalRotation);
+
+						// Send rotation to server for replication
+						if (!HasAuthority())
+						{
+							ServerUpdateRotation(FinalRotation);
+						}
 					}
 				}
 			}
@@ -453,7 +467,11 @@ void ATopDownCharacter::Die(AController* Killer)
 	// Call multicast to handle death on all clients (including server)
 	MulticastHandleDeath();
 
-	// TODO: Respawn logic in future tasks
+	// Request respawn from GameMode
+	if (ATopDownGameMode* GM = GetWorld()->GetAuthGameMode<ATopDownGameMode>())
+	{
+		GM->RequestRespawn(GetController());
+	}
 }
 
 void ATopDownCharacter::MulticastHandleDeath_Implementation()
@@ -494,4 +512,35 @@ void ATopDownCharacter::OnRep_Health(float OldHealth)
 		// Client-side death visuals
 		UE_LOG(LogTemp, Log, TEXT("Client: Character died"));
 	}
+}
+
+void ATopDownCharacter::ResetForRespawn()
+{
+	// Reset health
+	Health = MaxHealth;
+	bIsDead = false;
+
+	// Reset weapon component ammo
+	if (WeaponComponent)
+	{
+		WeaponComponent->ResetAmmo();
+	}
+
+	// Re-enable collision
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	GetMesh()->SetSimulatePhysics(false);
+	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+
+	// Re-enable input
+	if (IsLocallyControlled())
+	{
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			EnableInput(PC);
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("%s respawned with full health and ammo"), *GetName());
 }

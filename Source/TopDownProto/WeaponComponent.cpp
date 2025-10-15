@@ -199,6 +199,20 @@ void UWeaponComponent::ConsumeAmmo()
 	}
 }
 
+void UWeaponComponent::ResetAmmo()
+{
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		CurrentAmmo = MagazineSize;
+		ReserveAmmo = StartingReserveAmmo;
+		WeaponState = EWeaponState::Idle;
+		NextFireTime = 0.0f;
+		ReloadCompleteTime = 0.0f;
+
+		UE_LOG(LogTemp, Log, TEXT("Ammo reset to %d/%d"), CurrentAmmo, ReserveAmmo);
+	}
+}
+
 // ========================================================================================
 // Reload System
 // ========================================================================================

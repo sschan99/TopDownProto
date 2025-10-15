@@ -59,6 +59,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Health")
 	bool IsDead() const { return bIsDead; }
 
+	/** Reset character state for respawn */
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void ResetForRespawn();
+
 protected:
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -91,6 +95,11 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayFireEffects(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection);
 	void MulticastPlayFireEffects_Implementation(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection);
+
+	/** Server RPC - Update character rotation */
+	UFUNCTION(Server, Unreliable)
+	void ServerUpdateRotation(FRotator NewRotation);
+	void ServerUpdateRotation_Implementation(FRotator NewRotation);
 
 	// ========================================================================================
 	// Health System
