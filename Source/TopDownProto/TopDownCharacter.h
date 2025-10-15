@@ -33,6 +33,11 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	//~ End APawn Interface
 
+	//~ Begin AActor Interface
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, 
+	                         class AController* EventInstigator, AActor* DamageCauser) override;
+	//~ End AActor Interface
+
 	/** Returns TopDownCameraComponent subobject */
 	FORCEINLINE class UCameraComponent* GetTopDownCameraComponent() const { return TopDownCameraComponent; }
 	
@@ -41,6 +46,18 @@ public:
 
 	/** Returns WeaponComponent subobject */
 	FORCEINLINE UWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
+
+	/** Get current health */
+	UFUNCTION(BlueprintPure, Category = "Health")
+	float GetHealth() const { return Health; }
+
+	/** Get max health */
+	UFUNCTION(BlueprintPure, Category = "Health")
+	float GetMaxHealth() const { return MaxHealth; }
+
+	/** Check if character is dead */
+	UFUNCTION(BlueprintPure, Category = "Health")
+	bool IsDead() const { return bIsDead; }
 
 protected:
 	/** Called for movement input */
@@ -60,9 +77,9 @@ protected:
 
 	/** Server RPC - Request to fire weapon with direction */
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerRequestFire(FVector_NetQuantize FireDirection);
-	void ServerRequestFire_Implementation(FVector_NetQuantize FireDirection);
-	bool ServerRequestFire_Validate(FVector_NetQuantize FireDirection);
+	void ServerRequestFire(FVector_NetQuantize10 FireDirection);
+	void ServerRequestFire_Implementation(FVector_NetQuantize10 FireDirection);
+	bool ServerRequestFire_Validate(FVector_NetQuantize10 FireDirection);
 
 	/** Server RPC - Request to reload weapon */
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -74,6 +91,22 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayFireEffects(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection);
 	void MulticastPlayFireEffects_Implementation(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection);
+
+	// ========================================================================================
+	// Health System
+	// ========================================================================================
+
+	/** Called when character dies (server only) */
+	virtual void Die(AController* Killer);
+
+	/** Multicast RPC - Play death effects on all clients */
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastHandleDeath();
+	void MulticastHandleDeath_Implementation();
+
+	/** Called on clients when health changes */
+	UFUNCTION()
+	void OnRep_Health(float OldHealth);
 
 protected:
 	/** Top down camera */
@@ -123,6 +156,22 @@ protected:
 	/** Fire sound effect */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects", meta = (AllowPrivateAccess = "true"))
 	class USoundBase* FireSound;
+
+	// ========================================================================================
+	// Health Properties
+	// ========================================================================================
+
+	/** Current health (replicated to clients) */
+	UPROPERTY(ReplicatedUsing = OnRep_Health, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
+	float Health;
+
+	/** Maximum health */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health", meta = (AllowPrivateAccess = "true", ClampMin = "1.0"))
+	float MaxHealth;
+
+	/** Is character dead? */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
+	bool bIsDead;
 
 private:
 	/** Initialize character components and settings */

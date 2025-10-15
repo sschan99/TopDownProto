@@ -78,6 +78,11 @@ ATopDownCharacter::ATopDownCharacter()
 	MuzzleFlash = nullptr;
 	FireSound = nullptr;
 
+	// Initialize health
+	MaxHealth = 100.0f;
+	Health = MaxHealth;
+	bIsDead = false;
+
 	// Initialize character
 	InitializeCharacter();
 }
@@ -92,10 +97,9 @@ void ATopDownCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Replicate additional properties here as needed
-	// Example:
-	// DOREPLIFETIME(ATopDownCharacter, Health);
-	// DOREPLIFETIME(ATopDownCharacter, MaxHealth);
+	// Replicate health properties
+	DOREPLIFETIME(ATopDownCharacter, Health);
+	DOREPLIFETIME(ATopDownCharacter, bIsDead);
 }
 
 void ATopDownCharacter::BeginPlay()
@@ -273,7 +277,7 @@ void ATopDownCharacter::Reload()
 	}
 }
 
-void ATopDownCharacter::ServerRequestFire_Implementation(FVector_NetQuantize FireDirection)
+void ATopDownCharacter::ServerRequestFire_Implementation(FVector_NetQuantize10 FireDirection)
 {
 	// Server-side fire logic
 	if (WeaponComponent && WeaponComponent->TryFire(FireDirection))
@@ -289,7 +293,7 @@ void ATopDownCharacter::ServerRequestFire_Implementation(FVector_NetQuantize Fir
 	}
 }
 
-bool ATopDownCharacter::ServerRequestFire_Validate(FVector_NetQuantize FireDirection)
+bool ATopDownCharacter::ServerRequestFire_Validate(FVector_NetQuantize10 FireDirection)
 {
 	// Basic validation - just check it's not zero
 	// (Network quantization may affect precision, so we're lenient)
@@ -390,5 +394,104 @@ void ATopDownCharacter::UpdateRotationToMouseCursor(float DeltaTime)
 				}
 			}
 		}
+	}
+}
+
+// ========================================================================================
+// Health System
+// ========================================================================================
+
+float ATopDownCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, 
+                                     AController* EventInstigator, AActor* DamageCauser)
+{
+	// Only process damage on server
+	if (!HasAuthority())
+	{
+		return 0.0f;
+	}
+
+	// Don't take damage if already dead
+	if (bIsDead)
+	{
+		return 0.0f;
+	}
+
+	// Calculate actual damage taken
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (ActualDamage > 0.0f)
+	{
+		// Reduce health
+		Health = FMath::Max(0.0f, Health - ActualDamage);
+
+		UE_LOG(LogTemp, Log, TEXT("%s took %.2f damage, health now: %.2f/%.2f"), 
+		       *GetName(), ActualDamage, Health, MaxHealth);
+
+		// Check if character died
+		if (Health <= 0.0f && !bIsDead)
+		{
+			Die(EventInstigator);
+		}
+	}
+
+	return ActualDamage;
+}
+
+void ATopDownCharacter::Die(AController* Killer)
+{
+	// Only execute on server
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// Mark as dead
+	bIsDead = true;
+
+	UE_LOG(LogTemp, Log, TEXT("%s has died"), *GetName());
+
+	// Call multicast to handle death on all clients (including server)
+	MulticastHandleDeath();
+
+	// TODO: Respawn logic in future tasks
+}
+
+void ATopDownCharacter::MulticastHandleDeath_Implementation()
+{
+	UE_LOG(LogTemp, Log, TEXT("MulticastHandleDeath: %s"), *GetName());
+
+	// Disable input (on owning client)
+	if (IsLocallyControlled())
+	{
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			DisableInput(PC);
+		}
+	}
+
+	// Disable collision
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Ragdoll physics on all clients
+	GetMesh()->SetSimulatePhysics(true);
+	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+
+	// TODO: Play death animation/effects in future tasks
+}
+
+void ATopDownCharacter::OnRep_Health(float OldHealth)
+{
+	// Called on clients when health changes
+	UE_LOG(LogTemp, Log, TEXT("Client: Health changed from %.2f to %.2f"), OldHealth, Health);
+
+	// TODO: Update health UI in future tasks
+	// TODO: Play damage effects in future tasks
+
+	// Check if just died
+	if (Health <= 0.0f && !bIsDead)
+	{
+		// Client-side death visuals
+		UE_LOG(LogTemp, Log, TEXT("Client: Character died"));
 	}
 }
