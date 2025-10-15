@@ -90,4 +90,7 @@ protected:
 private:
 	/** Initialize character components and settings */
 	void InitializeCharacter();
+
+	/** Update character rotation to face mouse cursor position */
+	void UpdateRotationToMouseCursor(float DeltaTime);
 };

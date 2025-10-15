@@ -114,7 +114,11 @@ void ATopDownCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Per-frame updates can be done here
+	// Update character rotation toward mouse cursor (client-side only)
+	if (IsLocallyControlled() && TopDownCameraComponent)
+	{
+		UpdateRotationToMouseCursor(DeltaTime);
+	}
 }
 
 void ATopDownCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -178,16 +182,8 @@ void ATopDownCharacter::Move(const FInputActionValue& Value)
 
 void ATopDownCharacter::Look(const FInputActionValue& Value)
 {
-	// Input is a Vector2D (mouse position)
-	FVector2D LookAxisVector = Value.Get<FVector2D>();
-
-	// This will be implemented in Task 6 (Mouse-Based Aiming and Character Rotation)
-	// For now, just log the input
-	if (Controller != nullptr)
-	{
-		// Placeholder for mouse-based rotation logic
-		// Will rotate character to face mouse cursor position
-	}
+	// Look input is handled in Tick() via UpdateRotationToMouseCursor()
+	// This function is kept for Enhanced Input compatibility but not actively used
 }
 
 void ATopDownCharacter::Fire()
@@ -202,4 +198,57 @@ void ATopDownCharacter::Reload()
 	// This will be implemented in Task 12 (Reload System with Network Synchronization)
 	// For now, just log the input
 	UE_LOG(LogTemp, Log, TEXT("%s: Reload input received"), *GetName());
+}
+
+void ATopDownCharacter::UpdateRotationToMouseCursor(float DeltaTime)
+{
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		// Get viewport size
+		int32 ViewportSizeX, ViewportSizeY;
+		PC->GetViewportSize(ViewportSizeX, ViewportSizeY);
+
+		// Get mouse position (viewport coordinates, 0-1 normalized)
+		float MouseX, MouseY;
+		if (PC->GetMousePosition(MouseX, MouseY))
+		{
+			// Convert to viewport coordinates (0 to ViewportSize)
+			FVector2D ScreenPosition(MouseX, MouseY);
+
+			// Deproject screen position to world
+			FVector WorldLocation, WorldDirection;
+			if (PC->DeprojectScreenPositionToWorld(ScreenPosition.X, ScreenPosition.Y, WorldLocation, WorldDirection))
+			{
+				// For top-down view, find intersection with character's horizontal plane
+				FVector CharacterLocation = GetActorLocation();
+				float PlaneZ = CharacterLocation.Z;
+
+				// Calculate intersection point on the horizontal plane
+				if (!FMath::IsNearlyZero(WorldDirection.Z, KINDA_SMALL_NUMBER))
+				{
+					float T = (PlaneZ - WorldLocation.Z) / WorldDirection.Z;
+					FVector TargetLocation = WorldLocation + (WorldDirection * T);
+
+					// Calculate direction from character to target (XY plane only)
+					FVector Direction = TargetLocation - CharacterLocation;
+					Direction.Z = 0.0f;
+
+					if (!Direction.IsNearlyZero())
+					{
+						Direction.Normalize();
+
+						// Calculate target rotation
+						FRotator TargetRotation = Direction.Rotation();
+
+						// Smoothly interpolate rotation
+						FRotator CurrentRotation = GetActorRotation();
+						FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, 10.0f);
+
+						// Apply rotation (Yaw only for top-down)
+						SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));
+					}
+				}
+			}
+		}
+	}
 }
