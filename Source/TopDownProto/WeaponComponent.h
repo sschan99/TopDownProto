@@ -6,6 +6,8 @@
 #include "Components/ActorComponent.h"
 #include "WeaponComponent.generated.h"
 
+class AProjectile;
+
 /**
  * EWeaponState
  * 
@@ -65,10 +67,11 @@ public:
 	/**
 	 * Called when player attempts to fire weapon
 	 * Handles fire rate limiting and ammo consumption
+	 * @param FireDirection - Direction to fire the projectile (should be normalized)
 	 * @return True if weapon was successfully fired
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	bool TryFire();
+	bool TryFire(const FVector& FireDirection);
 
 	/**
 	 * Get current fire cooldown remaining time
@@ -183,6 +186,14 @@ public:
 	/** If true, weapon will automatically reload when empty and fire is attempted */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Reload")
 	bool bAutoReloadWhenEmpty;
+
+	/** Projectile class to spawn when firing */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Projectile")
+	TSubclassOf<AProjectile> ProjectileClass;
+
+	/** Offset from actor location to spawn projectile (in local space) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Projectile")
+	FVector MuzzleOffset;
 
 protected:
 	// ========================================================================================

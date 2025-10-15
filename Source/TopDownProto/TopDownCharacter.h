@@ -58,11 +58,11 @@ protected:
 	/** Called for reload input */
 	void Reload();
 
-	/** Server RPC - Request to fire weapon */
+	/** Server RPC - Request to fire weapon with direction */
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerRequestFire();
-	void ServerRequestFire_Implementation();
-	bool ServerRequestFire_Validate();
+	void ServerRequestFire(FVector_NetQuantize FireDirection);
+	void ServerRequestFire_Implementation(FVector_NetQuantize FireDirection);
+	bool ServerRequestFire_Validate(FVector_NetQuantize FireDirection);
 
 	/** Server RPC - Request to reload weapon */
 	UFUNCTION(Server, Reliable, WithValidation)

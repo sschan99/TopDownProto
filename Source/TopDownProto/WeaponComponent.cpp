@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "WeaponComponent.h"
+#include "Projectile.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -21,6 +22,10 @@ UWeaponComponent::UWeaponComponent()
 	MaxReserveAmmo = 150;                 // Maximum 150 reserve rounds
 	ReloadTime = 2.0f;                    // 2 seconds to reload
 	bAutoReloadWhenEmpty = true;          // Auto-reload when trying to fire empty gun
+
+	// Projectile configuration
+	ProjectileClass = nullptr;            // Set in Blueprint
+	MuzzleOffset = FVector(100.0f, 0.0f, 0.0f);  // Forward offset for spawn location
 
 	// Initialize ammo state
 	CurrentAmmo = MagazineSize;           // Start with full magazine
@@ -88,7 +93,7 @@ bool UWeaponComponent::CanFire() const
 	       GetWorldTime() >= NextFireTime;
 }
 
-bool UWeaponComponent::TryFire()
+bool UWeaponComponent::TryFire(const FVector& FireDirection)
 {
 	// This should only be called on server
 	if (!GetOwner() || !GetOwner()->HasAuthority())
@@ -105,6 +110,41 @@ bool UWeaponComponent::TryFire()
 
 	// Update weapon state to firing
 	WeaponState = EWeaponState::Firing;
+
+	// Spawn projectile if class is set
+	if (ProjectileClass && GetWorld())
+	{
+		AActor* Owner = GetOwner();
+		if (Owner)
+		{
+			// Calculate spawn location (muzzle position) using fire direction
+			FRotator FireRotation = FireDirection.Rotation();
+			FVector SpawnLocation = Owner->GetActorLocation() + FireRotation.RotateVector(MuzzleOffset);
+
+			// Set spawn parameters
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = Owner;
+			SpawnParams.Instigator = Cast<APawn>(Owner);
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			// Spawn projectile
+			AProjectile* Projectile = GetWorld()->SpawnActor<AProjectile>(
+				ProjectileClass,
+				SpawnLocation,
+				FireRotation,
+				SpawnParams
+			);
+
+			if (Projectile)
+			{
+				// Fire projectile in the specified direction
+				Projectile->FireInDirection(FireDirection);
+				
+				UE_LOG(LogTemp, Log, TEXT("Spawned projectile at %s facing %s"), 
+				       *SpawnLocation.ToString(), *FireDirection.ToString());
+			}
+		}
+	}
 
 	// Consume ammo (this may trigger auto-reload if magazine becomes empty)
 	ConsumeAmmo();

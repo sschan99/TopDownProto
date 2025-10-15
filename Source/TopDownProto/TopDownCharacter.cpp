@@ -199,10 +199,13 @@ void ATopDownCharacter::OnFirePressed()
 {
 	bIsFirePressed = true;
 
-	// Try to fire immediately
-	if (WeaponComponent && WeaponComponent->CanFire())
+	// Request fire immediately (server will check CanFire)
+	if (WeaponComponent)
 	{
-		ServerRequestFire();
+		// Calculate fire direction (where character is facing) and normalize
+		FVector FireDirection = GetActorRotation().Vector();
+		FireDirection.Normalize(); // Ensure normalized for network transmission
+		ServerRequestFire(FireDirection);
 	}
 
 	// Start automatic firing timer
@@ -244,10 +247,13 @@ void ATopDownCharacter::HandleAutoFire()
 		return;
 	}
 
-	// Try to fire (auto-reload is handled automatically by WeaponComponent)
-	if (WeaponComponent && WeaponComponent->CanFire())
+	// Request fire (server will check CanFire and handle auto-reload)
+	if (WeaponComponent)
 	{
-		ServerRequestFire();
+		// Calculate fire direction (where character is facing) and normalize
+		FVector FireDirection = GetActorRotation().Vector();
+		FireDirection.Normalize(); // Ensure normalized for network transmission
+		ServerRequestFire(FireDirection);
 	}
 }
 
@@ -260,21 +266,21 @@ void ATopDownCharacter::Reload()
 	}
 }
 
-void ATopDownCharacter::ServerRequestFire_Implementation()
+void ATopDownCharacter::ServerRequestFire_Implementation(FVector_NetQuantize FireDirection)
 {
 	// Server-side fire logic
-	if (WeaponComponent && WeaponComponent->TryFire())
+	if (WeaponComponent && WeaponComponent->TryFire(FireDirection))
 	{
-		UE_LOG(LogTemp, Log, TEXT("Server: %s fired weapon"), *GetName());
-		// TODO: Spawn projectile in Task 8
+		UE_LOG(LogTemp, Log, TEXT("Server: %s fired weapon in direction %s"), *GetName(), *FireDirection.ToString());
 		// TODO: Play effects via multicast RPC in Task 9
 	}
 }
 
-bool ATopDownCharacter::ServerRequestFire_Validate()
+bool ATopDownCharacter::ServerRequestFire_Validate(FVector_NetQuantize FireDirection)
 {
-	// Basic validation - could add more checks (distance, state, etc.)
-	return true;
+	// Basic validation - just check it's not zero
+	// (Network quantization may affect precision, so we're lenient)
+	return !FireDirection.IsNearlyZero(0.01f);
 }
 
 void ATopDownCharacter::ServerRequestReload_Implementation()
