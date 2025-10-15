@@ -16,6 +16,9 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "WeaponComponent.h"
 #include "TimerManager.h"
+#include "Particles/ParticleSystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 ATopDownCharacter::ATopDownCharacter()
 {
@@ -70,6 +73,10 @@ ATopDownCharacter::ATopDownCharacter()
 
 	// Initialize firing state
 	bIsFirePressed = false;
+
+	// Initialize effects (set in Blueprint)
+	MuzzleFlash = nullptr;
+	FireSound = nullptr;
 
 	// Initialize character
 	InitializeCharacter();
@@ -272,7 +279,13 @@ void ATopDownCharacter::ServerRequestFire_Implementation(FVector_NetQuantize Fir
 	if (WeaponComponent && WeaponComponent->TryFire(FireDirection))
 	{
 		UE_LOG(LogTemp, Log, TEXT("Server: %s fired weapon in direction %s"), *GetName(), *FireDirection.ToString());
-		// TODO: Play effects via multicast RPC in Task 9
+		
+		// Calculate muzzle location for effects
+		FRotator FireRotation = FireDirection.Rotation();
+		FVector MuzzleLocation = GetActorLocation() + FireRotation.RotateVector(WeaponComponent->MuzzleOffset);
+		
+		// Play fire effects on all clients (including server)
+		MulticastPlayFireEffects(MuzzleLocation, FireDirection);
 	}
 }
 
@@ -297,6 +310,34 @@ bool ATopDownCharacter::ServerRequestReload_Validate()
 {
 	// Basic validation
 	return true;
+}
+
+void ATopDownCharacter::MulticastPlayFireEffects_Implementation(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection)
+{
+	// Play muzzle flash particle effect
+	if (MuzzleFlash)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(
+			GetWorld(),
+			MuzzleFlash,
+			MuzzleLocation,
+			FireDirection.Rotation(),
+			FVector(1.0f),
+			true
+		);
+	}
+
+	// Play fire sound
+	if (FireSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			FireSound,
+			MuzzleLocation
+		);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Playing fire effects at %s"), *MuzzleLocation.ToString());
 }
 
 void ATopDownCharacter::UpdateRotationToMouseCursor(float DeltaTime)

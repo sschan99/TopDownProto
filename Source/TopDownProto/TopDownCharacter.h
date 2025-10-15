@@ -70,6 +70,11 @@ protected:
 	void ServerRequestReload_Implementation();
 	bool ServerRequestReload_Validate();
 
+	/** Multicast RPC - Play fire effects on all clients */
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayFireEffects(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection);
+	void MulticastPlayFireEffects_Implementation(FVector_NetQuantize MuzzleLocation, FVector_NetQuantize FireDirection);
+
 protected:
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -110,6 +115,14 @@ protected:
 	/** Weapon Component for handling ammo and firing */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon, meta = (AllowPrivateAccess = "true"))
 	UWeaponComponent* WeaponComponent;
+
+	/** Muzzle flash particle system */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects", meta = (AllowPrivateAccess = "true"))
+	class UParticleSystem* MuzzleFlash;
+
+	/** Fire sound effect */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects", meta = (AllowPrivateAccess = "true"))
+	class USoundBase* FireSound;
 
 private:
 	/** Initialize character components and settings */
