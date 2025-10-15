@@ -2,12 +2,16 @@
 	"FileVersion": 3,
 	"EngineAssociation": "5.5",
 	"Category": "",
-	"Description": "",
+	"Description": "Multiplayer Top-Down Shooter",
 	"Modules": [
 		{
 			"Name": "TopDownProto",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"CoreUObject"
+			]
 		}
 	],
 	"Plugins": [
@@ -17,6 +21,14 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "OnlineSubsystem",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemUtils",
+			"Enabled": true
 		}
 	]
 }

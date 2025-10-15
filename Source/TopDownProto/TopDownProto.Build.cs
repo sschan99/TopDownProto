@@ -8,16 +8,35 @@ public class TopDownProto : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		// Core modules for basic functionality
+		PublicDependencyModuleNames.AddRange(new string[] { 
+			"Core", 
+			"CoreUObject", 
+			"Engine", 
+			"InputCore", 
+			"EnhancedInput",
+			"HeadMountedDisplay"  // For VR support if needed
+		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		// Networking and multiplayer modules
+		PrivateDependencyModuleNames.AddRange(new string[] { 
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+			"Sockets",
+			"Networking"
+		});
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
-		
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
+		// UI modules
+		PrivateDependencyModuleNames.AddRange(new string[] { 
+			"Slate", 
+			"SlateCore",
+			"UMG"
+		});
 
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+		// Additional gameplay modules
+		PrivateDependencyModuleNames.AddRange(new string[] {
+			"AIModule",
+			"GameplayTasks"
+		});
 	}
 }
