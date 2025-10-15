@@ -1,0 +1,161 @@
+# =========================
+# Unreal Engine Git Ignore
+# =========================
+
+# Build artifacts
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.VC.db
+*.opensdf
+*.suo
+*.sln
+*.xcodeproj
+
+# User-specific files
+*.user
+*.userprefs
+*.log
+*.tlog
+*.obj
+*.pch
+*.pdb
+*.db
+*.ipch
+*.sdf
+*.cache
+*.o
+*.gch
+*.mii
+
+# System-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Unreal local files
+*.aps
+*_BuiltData.uasset
+*.umap.temp
+*.uasset.temp
+
+# Backup and autosave
+*_Backup*/
+Backup/
+Autosaves/
+
+# Config files that should be ignored
+Config/DefaultEditor.ini
+Config/DefaultEditorPerProjectUserSettings.ini
+
+# Plugins that generate binaries
+Plugins/*/Intermediate/
+Plugins/*/Binaries/
+Plugins/*/Saved/
+
+# Precompiled builds
+*.dll
+*.exe
+*.app
+*.so
+*.dylib
+
+# Unreal Engine Launcher Vault Cache
+VaultCache/
+
+# Crash reports
+CrashReportClient/
+
+# Local debug and profiling
+*.prof
+*.pid
+
+# JetBrains / Rider
+.idea/
+
+# CMake or other external build tools
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+
+# Unreal Engine Generated Project Files
+*.sln
+*.xcodeproj
+*.xcworkspace
+*.sdf
+*.opensdf
+*.VC.db
+*.suo
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# Optional: keep project settings but ignore user specific
+Config/*.ini
+!Config/DefaultEngine.ini
+!Config/DefaultGame.ini
+!Config/DefaultInput.ini
+!Config/DefaultEditor.ini
+
+# Allow source and content
+!Source/**
+!Content/**
+!Plugins/**/Source/**
+!Plugins/**/Content/**
+
+# Logs
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+.env
+# Editor directories and files
+.idea
+.vscode
+*.ntvs*
+*.njsproj
+*.sw?
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 
+
+# Cursor / AI / MCP
+.cursor/
+.taskmaster/
+.session/
+*.mcp.json
+*.mcp.cache
+logs/
+
+# Editors
+.vscode/
+.idea/
+.vs/
+.vsconfig
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Unreal / Build junk
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+*_BuiltData.uasset
+*.umap.temp
+*.uasset.temp
+Backup/
+Autosaves/
+CLAUDE.md
