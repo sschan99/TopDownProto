@@ -2,6 +2,7 @@
 
 #include "WeaponComponent.h"
 #include "Projectile.h"
+#include "TopDownCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -190,6 +191,15 @@ void UWeaponComponent::ConsumeAmmo()
 	{
 		CurrentAmmo = FMath::Max(0, CurrentAmmo - 1);
 		
+		// Update HUD on server (OnRep doesn't fire on server)
+		if (ATopDownCharacter* Character = Cast<ATopDownCharacter>(GetOwner()))
+		{
+			if (Character->IsLocallyControlled())
+			{
+				Character->UpdateHUDDisplay();
+			}
+		}
+		
 		// If we just emptied the magazine, trigger auto-reload immediately
 		if (CurrentAmmo == 0 && bAutoReloadWhenEmpty && HasReserveAmmo())
 		{
@@ -276,6 +286,15 @@ void UWeaponComponent::CompleteReload()
 	WeaponState = EWeaponState::Idle;
 	ReloadCompleteTime = 0.0f;
 
+	// Update HUD on server (OnRep doesn't fire on server)
+	if (ATopDownCharacter* Character = Cast<ATopDownCharacter>(GetOwner()))
+	{
+		if (Character->IsLocallyControlled())
+		{
+			Character->UpdateHUDDisplay();
+		}
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("Reload completed! Ammo: %d/%d"), CurrentAmmo, ReserveAmmo);
 }
 
@@ -303,13 +322,23 @@ void UWeaponComponent::OnRep_CurrentAmmo()
 	// Called on clients when CurrentAmmo changes
 	UE_LOG(LogTemp, Log, TEXT("Client: Current ammo updated to %d"), CurrentAmmo);
 	
-	// Here you could trigger UI updates, sound effects, etc.
+	// Update HUD
+	if (ATopDownCharacter* Character = Cast<ATopDownCharacter>(GetOwner()))
+	{
+		Character->UpdateHUDDisplay();
+	}
 }
 
 void UWeaponComponent::OnRep_ReserveAmmo()
 {
 	// Called on clients when ReserveAmmo changes
 	UE_LOG(LogTemp, Log, TEXT("Client: Reserve ammo updated to %d"), ReserveAmmo);
+
+	// Update HUD
+	if (ATopDownCharacter* Character = Cast<ATopDownCharacter>(GetOwner()))
+	{
+		Character->UpdateHUDDisplay();
+	}
 }
 
 void UWeaponComponent::OnRep_WeaponState()

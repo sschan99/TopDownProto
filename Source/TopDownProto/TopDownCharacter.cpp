@@ -20,6 +20,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "TopDownGameMode.h"
+#include "TopDownPlayerController.h"
+#include "TopDownHUD.h"
+#include "Blueprint/UserWidget.h"
 
 ATopDownCharacter::ATopDownCharacter()
 {
@@ -128,6 +131,8 @@ void ATopDownCharacter::BeginPlay()
 	{
 		UE_LOG(LogTemp, Log, TEXT("TopDownCharacter spawned on client: %s"), *GetName());
 	}
+
+	// HUD is now managed by PlayerController (persists across respawns)
 }
 
 void ATopDownCharacter::Tick(float DeltaTime)
@@ -441,6 +446,12 @@ float ATopDownCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 		UE_LOG(LogTemp, Log, TEXT("%s took %.2f damage, health now: %.2f/%.2f"), 
 		       *GetName(), ActualDamage, Health, MaxHealth);
 
+		// Update HUD (server doesn't trigger OnRep, so update manually)
+		if (IsLocallyControlled())
+		{
+			UpdateHUDDisplay();
+		}
+
 		// Check if character died
 		if (Health <= 0.0f && !bIsDead)
 		{
@@ -478,6 +489,13 @@ void ATopDownCharacter::MulticastHandleDeath_Implementation()
 {
 	UE_LOG(LogTemp, Log, TEXT("MulticastHandleDeath: %s"), *GetName());
 
+	// Ensure health is 0 on all clients for UI display
+	Health = 0.0f;
+	bIsDead = true;
+
+	// Update HUD to show 0 health
+	UpdateHUDDisplay();
+
 	// Disable input (on owning client)
 	if (IsLocallyControlled())
 	{
@@ -503,7 +521,9 @@ void ATopDownCharacter::OnRep_Health(float OldHealth)
 	// Called on clients when health changes
 	UE_LOG(LogTemp, Log, TEXT("Client: Health changed from %.2f to %.2f"), OldHealth, Health);
 
-	// TODO: Update health UI in future tasks
+	// Update HUD
+	UpdateHUDDisplay();
+
 	// TODO: Play damage effects in future tasks
 
 	// Check if just died
@@ -543,4 +563,21 @@ void ATopDownCharacter::ResetForRespawn()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("%s respawned with full health and ammo"), *GetName());
+
+	// Update HUD after respawn
+	UpdateHUDDisplay();
+}
+
+void ATopDownCharacter::UpdateHUDDisplay()
+{
+	if (IsLocallyControlled())
+	{
+		if (ATopDownPlayerController* PC = Cast<ATopDownPlayerController>(GetController()))
+		{
+			if (PC->HUDWidget)
+			{
+				PC->HUDWidget->UpdateHUD();
+			}
+		}
+	}
 }

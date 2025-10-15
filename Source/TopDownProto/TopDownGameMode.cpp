@@ -3,6 +3,7 @@
 #include "TopDownGameMode.h"
 #include "TopDownGameState.h"
 #include "TopDownCharacter.h"
+#include "TopDownPlayerController.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameFramework/PlayerController.h"
 #include "EngineUtils.h"
@@ -16,6 +17,9 @@ ATopDownGameMode::ATopDownGameMode()
 
 	// Set default pawn class to TopDownCharacter
 	DefaultPawnClass = ATopDownCharacter::StaticClass();
+
+	// Set default player controller class
+	PlayerControllerClass = ATopDownPlayerController::StaticClass();
 
 	// Set default respawn delay (3 seconds)
 	RespawnDelay = 3.0f;
