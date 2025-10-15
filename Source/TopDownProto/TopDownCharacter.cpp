@@ -14,6 +14,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "WeaponComponent.h"
+#include "TimerManager.h"
 
 ATopDownCharacter::ATopDownCharacter()
 {
@@ -56,12 +58,18 @@ ATopDownCharacter::ATopDownCharacter()
 	BaseTurnRate = 45.0f;
 	BaseLookUpRate = 45.0f;
 
+	// Create weapon component
+	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>(TEXT("WeaponComponent"));
+
 	// Initialize Input Actions to nullptr (will be set in Blueprint or C++)
 	DefaultMappingContext = nullptr;
 	MoveAction = nullptr;
 	LookAction = nullptr;
 	FireAction = nullptr;
 	ReloadAction = nullptr;
+
+	// Initialize firing state
+	bIsFirePressed = false;
 
 	// Initialize character
 	InitializeCharacter();
@@ -140,10 +148,11 @@ void ATopDownCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATopDownCharacter::Look);
 		}
 
-		// Firing
+		// Firing (automatic fire while held)
 		if (FireAction)
 		{
-			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &ATopDownCharacter::Fire);
+			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &ATopDownCharacter::OnFirePressed);
+			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &ATopDownCharacter::OnFireReleased);
 		}
 
 		// Reloading
@@ -186,18 +195,102 @@ void ATopDownCharacter::Look(const FInputActionValue& Value)
 	// This function is kept for Enhanced Input compatibility but not actively used
 }
 
-void ATopDownCharacter::Fire()
+void ATopDownCharacter::OnFirePressed()
 {
-	// This will be implemented in Task 9 (Shooting Mechanics with RPC)
-	// For now, just log the input
-	UE_LOG(LogTemp, Log, TEXT("%s: Fire input received"), *GetName());
+	bIsFirePressed = true;
+
+	// Try to fire immediately
+	if (WeaponComponent && WeaponComponent->CanFire())
+	{
+		ServerRequestFire();
+	}
+
+	// Start automatic firing timer
+	if (GetWorld())
+	{
+		// Calculate fire interval from WeaponComponent's fire rate
+		float FireInterval = WeaponComponent ? (60.0f / FMath::Max(1.0f, WeaponComponent->FireRate)) : 0.1f;
+		
+		GetWorld()->GetTimerManager().SetTimer(
+			AutoFireTimerHandle,
+			this,
+			&ATopDownCharacter::HandleAutoFire,
+			FireInterval,
+			true  // Loop
+		);
+	}
+}
+
+void ATopDownCharacter::OnFireReleased()
+{
+	bIsFirePressed = false;
+
+	// Stop automatic firing
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(AutoFireTimerHandle);
+	}
+}
+
+void ATopDownCharacter::HandleAutoFire()
+{
+	// Only continue firing if button is still pressed
+	if (!bIsFirePressed)
+	{
+		if (GetWorld())
+		{
+			GetWorld()->GetTimerManager().ClearTimer(AutoFireTimerHandle);
+		}
+		return;
+	}
+
+	// Try to fire (auto-reload is handled automatically by WeaponComponent)
+	if (WeaponComponent && WeaponComponent->CanFire())
+	{
+		ServerRequestFire();
+	}
 }
 
 void ATopDownCharacter::Reload()
 {
-	// This will be implemented in Task 12 (Reload System with Network Synchronization)
-	// For now, just log the input
-	UE_LOG(LogTemp, Log, TEXT("%s: Reload input received"), *GetName());
+	// Client-side input - request reload from server
+	if (WeaponComponent && WeaponComponent->CanReload())
+	{
+		ServerRequestReload();
+	}
+}
+
+void ATopDownCharacter::ServerRequestFire_Implementation()
+{
+	// Server-side fire logic
+	if (WeaponComponent && WeaponComponent->TryFire())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Server: %s fired weapon"), *GetName());
+		// TODO: Spawn projectile in Task 8
+		// TODO: Play effects via multicast RPC in Task 9
+	}
+}
+
+bool ATopDownCharacter::ServerRequestFire_Validate()
+{
+	// Basic validation - could add more checks (distance, state, etc.)
+	return true;
+}
+
+void ATopDownCharacter::ServerRequestReload_Implementation()
+{
+	// Server-side reload logic
+	if (WeaponComponent && WeaponComponent->StartReload())
+	{
+		UE_LOG(LogTemp, Log, TEXT("Server: %s started reload"), *GetName());
+		// TODO: Play reload animation/effects via multicast RPC
+	}
+}
+
+bool ATopDownCharacter::ServerRequestReload_Validate()
+{
+	// Basic validation
+	return true;
 }
 
 void ATopDownCharacter::UpdateRotationToMouseCursor(float DeltaTime)

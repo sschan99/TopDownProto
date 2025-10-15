@@ -7,6 +7,8 @@
 #include "InputActionValue.h"
 #include "TopDownCharacter.generated.h"
 
+class UWeaponComponent;
+
 /**
  * ATopDownCharacter
  * 
@@ -37,6 +39,9 @@ public:
 	/** Returns CameraBoom subobject */
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
+	/** Returns WeaponComponent subobject */
+	FORCEINLINE UWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
+
 protected:
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -44,11 +49,26 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	/** Called for fire input */
-	void Fire();
+	/** Called when fire input is pressed */
+	void OnFirePressed();
+
+	/** Called when fire input is released */
+	void OnFireReleased();
 
 	/** Called for reload input */
 	void Reload();
+
+	/** Server RPC - Request to fire weapon */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRequestFire();
+	void ServerRequestFire_Implementation();
+	bool ServerRequestFire_Validate();
+
+	/** Server RPC - Request to reload weapon */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRequestReload();
+	void ServerRequestReload_Implementation();
+	bool ServerRequestReload_Validate();
 
 protected:
 	/** Top down camera */
@@ -87,10 +107,23 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* ReloadAction;
 
+	/** Weapon Component for handling ammo and firing */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon, meta = (AllowPrivateAccess = "true"))
+	UWeaponComponent* WeaponComponent;
+
 private:
 	/** Initialize character components and settings */
 	void InitializeCharacter();
 
 	/** Update character rotation to face mouse cursor position */
 	void UpdateRotationToMouseCursor(float DeltaTime);
+
+	/** Handle automatic firing while fire button is held */
+	void HandleAutoFire();
+
+	/** Timer handle for automatic firing */
+	FTimerHandle AutoFireTimerHandle;
+
+	/** Is fire button currently pressed? */
+	bool bIsFirePressed;
 };
