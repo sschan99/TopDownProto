@@ -2,6 +2,7 @@
 
 #include "TopDownGameMode.h"
 #include "TopDownGameState.h"
+#include "TopDownCharacter.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameFramework/PlayerController.h"
 #include "EngineUtils.h"
@@ -13,16 +14,11 @@ ATopDownGameMode::ATopDownGameMode()
 	// Set default game state class
 	GameStateClass = ATopDownGameState::StaticClass();
 
+	// Set default pawn class to TopDownCharacter
+	DefaultPawnClass = ATopDownCharacter::StaticClass();
+
 	// Set default respawn delay (3 seconds)
 	RespawnDelay = 3.0f;
-
-	// Note: Default pawn class will be set in Task 3
-	// For now, we'll use the default character
-	// static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/TopDownBP/Blueprints/TopDownCharacter"));
-	// if (PlayerPawnBPClass.Class != nullptr)
-	// {
-	// 	DefaultPawnClass = PlayerPawnBPClass.Class;
-	// }
 
 	// Enable replication
 	bReplicates = true;
